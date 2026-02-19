@@ -1,0 +1,48 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-5QSGucLR.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/img/gengr_dark.png": {
+    "file": "assets/gengr_dark-DFQBf4s9.png",
+    "src": "resources/img/gengr_dark.png"
+  },
+  "resources/img/gengr_light.png": {
+    "file": "assets/gengr_light-Bffoe8ch.png",
+    "src": "resources/img/gengr_light.png"
+  },
+  "resources/img/gengr_logo_darkmode.png": {
+    "file": "assets/gengr_logo_darkmode-yzswpuuu.png",
+    "src": "resources/img/gengr_logo_darkmode.png"
+  },
+  "resources/img/gengr_logo_lightmode.png": {
+    "file": "assets/gengr_logo_lightmode-ZjrL0DAn.png",
+    "src": "resources/img/gengr_logo_lightmode.png"
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-ChRhr1kG.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/gengr.js": {
+    "file": "assets/gengr-DXIjRn7Q.js",
+    "name": "gengr",
+    "src": "resources/js/gengr.js",
+    "isEntry": true
+  },
+  "resources/js/viewer-init.js": {
+    "file": "assets/viewer-init-DwYFpJmX.js",
+    "name": "viewer-init",
+    "src": "resources/js/viewer-init.js",
+    "isEntry": true,
+    "imports": [
+      "resources/js/gengr.js"
+    ]
+  }
+}
