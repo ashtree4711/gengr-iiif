@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/Users/markeschweiler/.config/herd-lite/bin/php",
+            "args": [
+                "/Users/markeschweiler/Documents/ai-app/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}
