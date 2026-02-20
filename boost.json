@@ -1,7 +1,6 @@
 {
     "agents": [
-        "junie",
-        "gemini"
+        "codex"
     ],
     "guidelines": true,
     "herd_mcp": false,

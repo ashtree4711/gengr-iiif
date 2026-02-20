@@ -1,0 +1,30 @@
+{
+    "name": "gengr-iiif-viewer",
+    "version": "0.1.0",
+    "description": "Gengr IIIF explorer viewer (image, presentation, AV, and 3D) built on OpenSeadragon.",
+    "type": "module",
+    "main": "./dist/gengr.umd.cjs",
+    "module": "./dist/gengr.es.js",
+    "scripts": {
+        "build": "vite build"
+    },
+    "exports": {
+        ".": {
+            "import": "./dist/gengr.es.js",
+            "require": "./dist/gengr.umd.cjs"
+        }
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "sideEffects": false,
+    "devDependencies": {
+        "vite": "^7.0.7"
+    },
+    "dependencies": {
+        "@tabler/icons": "^3.0.0",
+        "@google/model-viewer": "^4.1.0",
+        "openseadragon": "^6.0.0"
+    }
+}

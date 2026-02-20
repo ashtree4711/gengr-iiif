@@ -1,1 +1,0 @@
-import{G as e}from"./gengr-DXIjRn7Q.js";document.addEventListener("DOMContentLoaded",()=>{window.Gengr=new e("gengr-container",{primaryColor:"#451F8D",darkMode:"app",logoUrl:document.getElementById("gengr-logo-src").src,logoUrlDark:document.getElementById("gengr-logo-dark-src").src})});
