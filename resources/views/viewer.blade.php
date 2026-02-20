@@ -56,7 +56,7 @@
                         class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors text-black dark:text-white">
                     Image (v3)
                 </button>
-                <button onclick="Gengr.loadManifest('https://iiif.io/api/cookbook/recipe/0002-mvm-audio/')"
+                <button onclick="Gengr.loadManifest('https://iiif.io/api/cookbook/recipe/0002-mvm-audio/manifest.json')"
                         class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors text-black dark:text-white">
                     AV (Audio)
                 </button>

@@ -18,11 +18,16 @@ export class GengrExplorer {
         };
 
         this.currentManifest = null;
+        this.currentParsed = null;
         this.osdExplorer = null;
         this.avPlayer = null;
         this.isDark = false;
         this.isBookMode = false;
         this.tileSources = [];
+        this.avItems = [];
+        this.modelItems = [];
+        this.currentAvIndex = 0;
+        this.currentModelIndex = 0;
 
         // Apply theme color as CSS variable
         this.container.style.setProperty('--gengr-primary', this.options.primaryColor);
@@ -385,22 +390,29 @@ export class GengrExplorer {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const manifest = await response.json();
             this.currentManifest = manifest;
-            this.render(this.detectType(manifest), manifest);
+            this.currentAvIndex = 0;
+            this.currentModelIndex = 0;
+            this.currentParsed = this.parseManifest(manifest);
+            this.render(this.currentParsed.type, manifest, this.currentParsed);
         } catch (error) {
             console.error('Gengr: Error loading manifest', error);
             this.showMessage(`Error: ${error.message}`);
         } finally { this.showLoader(false); }
     }
 
-    detectType(manifest) {
-        const str = JSON.stringify(manifest).toLowerCase();
-        if (str.includes('model/gltf') || str.includes('.glb') || str.includes('.gltf')) return '3d';
-        if (str.includes('"type":"video"') || str.includes('"type": "video"') || str.includes('"type":"sound"') || str.includes('"type": "sound"') || str.includes('format":"video/') || str.includes('format": "video/') || str.includes('format":"audio/') || str.includes('format": "audio/')) return 'av';
+    detectType(manifest, parsed) {
+        const mType = (manifest.type || manifest['@type'] || '').toLowerCase();
+        if (mType.includes('collection')) return 'collection';
+        if (parsed?.modelItems?.length) return '3d';
+        if (parsed?.avItems?.length) return 'av';
+        if (parsed?.imageSources?.length) return 'image';
         return (manifest.items || manifest.sequences) ? 'image' : 'unknown';
     }
 
-    render(type, manifest) {
-        this.hideMessage(); this.updateTopBar(type, manifest); this.updateMetadata(manifest);
+    render(type, manifest, parsed) {
+        this.hideMessage();
+        this.updateTopBar(type, manifest, parsed);
+        this.updateMetadata(manifest, parsed);
         
         this.els.btns.playToggle.classList.toggle('gengr-hidden', type !== 'av');
         this.els.avControls.classList.toggle('gengr-hidden', type !== 'av');
@@ -411,29 +423,17 @@ export class GengrExplorer {
         this.els.btns.bookToggle.classList.toggle('gengr-hidden', type !== 'image');
 
         switch (type) {
-            case 'image': this.renderImage(manifest); break;
-            case 'av': this.renderAV(manifest); break;
-            case '3d': this.render3D(manifest); break;
+            case 'collection': this.renderCollection(manifest, parsed); break;
+            case 'image': this.renderImage(manifest, parsed); break;
+            case 'av': this.renderAV(manifest, parsed); break;
+            case '3d': this.render3D(manifest, parsed); break;
             default: this.showMessage('Unsupported content type.');
         }
     }
 
-    renderImage(manifest) {
+    renderImage(manifest, parsed) {
         this.els.osd.classList.remove('hidden'); this.showToolbar(true);
-        let sources = [];
-        const findImageServices = (obj) => {
-            if (!obj) return;
-            if (obj.profile && (typeof obj.profile === 'string' && obj.profile.includes('http://iiif.io/api/image'))) {
-                let id = obj.id || obj['@id']; if (id) sources.push(id.endsWith('/info.json') ? id : `${id}/info.json`); return;
-            }
-            if (obj.type === 'ImageService3' || obj.type === 'ImageService2' || obj.type === 'ImageService1') {
-                let id = obj.id || obj['@id']; if (id) sources.push(id.endsWith('/info.json') ? id : `${id}/info.json`); return;
-            }
-            if (Array.isArray(obj)) obj.forEach(findImageServices);
-            else if (typeof obj === 'object') Object.values(obj).forEach(findImageServices);
-        };
-        findImageServices(manifest);
-        this.tileSources = [...new Set(sources)];
+        this.tileSources = parsed?.imageSources?.length ? parsed.imageSources : [];
         if (this.osdExplorer) this.osdExplorer.destroy();
         if (this.tileSources.length === 0) { this.showMessage("No image services found."); this.showToolbar(true); return; }
         let finalSources = this.tileSources;
@@ -470,7 +470,7 @@ export class GengrExplorer {
         this.els.pageNum.innerText = displayString;
     }
 
-    updateTopBar(type, manifest) {
+    updateTopBar(type, manifest, parsed) {
         this.els.topBar.style.opacity = '1';
         const getLabel = (label) => {
             if (!label) return 'Untitled';
@@ -481,16 +481,17 @@ export class GengrExplorer {
             }
             return 'Untitled';
         };
-        this.els.title.innerText = getLabel(manifest.label);
-        this.els.description.innerText = getLabel(manifest.description || manifest.summary || '');
+        this.els.title.innerText = parsed?.label || getLabel(manifest.label);
+        this.els.description.innerText = parsed?.summary || getLabel(manifest.description || manifest.summary || '');
         let iconSvg = '';
         if (type === 'image') iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`;
         else if (type === 'av') iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>`;
+        else if (type === 'collection') iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4"></rect><rect x="3" y="10" width="18" height="4"></rect><rect x="3" y="16" width="18" height="4"></rect></svg>`;
         else iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
         this.els.mediaIcon.innerHTML = iconSvg;
     }
 
-    updateMetadata(manifest) {
+    updateMetadata(manifest, parsed) {
         const getLabel = (label) => {
             if (!label) return '';
             if (typeof label === 'string') return label;
@@ -500,25 +501,75 @@ export class GengrExplorer {
             }
             return '';
         };
-        let html = `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10"><p class="opacity-50 text-[10px] uppercase font-black mb-1 gengr-text">Title</p><p class="font-bold text-xs gengr-text">${getLabel(manifest.label)}</p></div>`;
-        if (manifest.metadata) {
-            manifest.metadata.forEach(item => {
-                html += `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10"><p class="opacity-50 text-[10px] uppercase font-black mb-1 gengr-text">${getLabel(item.label)}</p><p class="text-xs leading-relaxed opacity-80 gengr-text">${getLabel(item.value)}</p></div>`;
+        const titleLabel = parsed?.label || getLabel(manifest.label);
+        let html = `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10"><p class="opacity-50 text-[10px] uppercase font-black mb-1 gengr-text">Title</p><p class="font-bold text-xs gengr-text">${titleLabel || 'Untitled'}</p></div>`;
+        const meta = parsed?.metadata?.length ? parsed.metadata : (manifest.metadata || []);
+        meta.forEach(item => {
+            html += `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10"><p class="opacity-50 text-[10px] uppercase font-black mb-1 gengr-text">${getLabel(item.label)}</p><p class="text-xs leading-relaxed opacity-80 gengr-text">${getLabel(item.value)}</p></div>`;
+        });
+        if (parsed?.type === 'collection' && parsed?.items?.length) {
+            html += `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
+                <p class="opacity-50 text-[10px] uppercase font-black mb-2 gengr-text">Collection Items</p>
+                <div class="space-y-2">`;
+            parsed.items.forEach((item, idx) => {
+                const label = item.label || `Item ${idx + 1}`;
+                html += `<button data-gengr-item="${idx}" class="w-full text-left text-xs px-3 py-2 rounded-lg border border-black/5 dark:border-white/10 hover:border-[var(--gengr-primary)] transition-colors gengr-text">${label}</button>`;
             });
+            html += `</div></div>`;
         }
-        if (this.els.metadataContainer) this.els.metadataContainer.innerHTML = html;
+        if (parsed?.canvases?.length > 1) {
+            html += `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
+                <p class="opacity-50 text-[10px] uppercase font-black mb-2 gengr-text">Canvases</p>
+                <div class="space-y-2">`;
+            parsed.canvases.forEach((canvas, idx) => {
+                const label = canvas.label || `Canvas ${idx + 1}`;
+                html += `<button data-gengr-canvas="${idx}" class="w-full text-left text-xs px-3 py-2 rounded-lg border border-black/5 dark:border-white/10 hover:border-[var(--gengr-primary)] transition-colors gengr-text">${label}</button>`;
+            });
+            html += `</div></div>`;
+        }
+        if (parsed?.ranges?.length) {
+            html += `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
+                <p class="opacity-50 text-[10px] uppercase font-black mb-2 gengr-text">Ranges</p>
+                <div class="space-y-2">`;
+            parsed.ranges.forEach((range, idx) => {
+                const label = range.label || `Range ${idx + 1}`;
+                html += `<button data-gengr-range="${idx}" class="w-full text-left text-xs px-3 py-2 rounded-lg border border-black/5 dark:border-white/10 hover:border-[var(--gengr-primary)] transition-colors gengr-text">${label}</button>`;
+            });
+            html += `</div></div>`;
+        }
+        if (parsed?.avItems?.length > 1) {
+            html += `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
+                <p class="opacity-50 text-[10px] uppercase font-black mb-2 gengr-text">Playlist</p>
+                <div class="space-y-2">`;
+            parsed.avItems.forEach((item, idx) => {
+                const label = item.label || `Track ${idx + 1}`;
+                html += `<button data-gengr-av="${idx}" class="w-full text-left text-xs px-3 py-2 rounded-lg border border-black/5 dark:border-white/10 hover:border-[var(--gengr-primary)] transition-colors gengr-text">${label}</button>`;
+            });
+            html += `</div></div>`;
+        }
+        if (parsed?.modelItems?.length > 1) {
+            html += `<div class="p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
+                <p class="opacity-50 text-[10px] uppercase font-black mb-2 gengr-text">3D Models</p>
+                <div class="space-y-2">`;
+            parsed.modelItems.forEach((item, idx) => {
+                const label = item.label || `Model ${idx + 1}`;
+                html += `<button data-gengr-model="${idx}" class="w-full text-left text-xs px-3 py-2 rounded-lg border border-black/5 dark:border-white/10 hover:border-[var(--gengr-primary)] transition-colors gengr-text">${label}</button>`;
+            });
+            html += `</div></div>`;
+        }
+        if (this.els.metadataContainer) {
+            this.els.metadataContainer.innerHTML = html;
+            this.bindSidebarActions(parsed);
+        }
     }
 
-    renderAV(manifest) {
+    renderAV(manifest, parsed) {
         this.els.av.classList.remove('hidden'); this.showToolbar(true);
-        let mediaUrl = null; let mediaType = 'video';
-        const findMedia = (obj) => {
-            if (!obj || mediaUrl) return;
-            if (obj.type === 'Video' || obj.type === 'Sound' || obj.format?.startsWith('video/') || obj.format?.startsWith('audio/')) { mediaUrl = obj.id; mediaType = (obj.type === 'Sound' || obj.format?.startsWith('audio/')) ? 'audio' : 'video'; return; }
-            if (Array.isArray(obj)) obj.forEach(findMedia);
-            else if (typeof obj === 'object') Object.values(obj).forEach(findMedia);
-        };
-        findMedia(manifest);
+        this.avItems = parsed?.avItems || [];
+        if (this.avItems.length === 0) { this.showMessage("No audio/video items found."); return; }
+        const current = this.avItems[this.currentAvIndex] || this.avItems[0];
+        const mediaUrl = current?.id || current?.url;
+        const mediaType = current?.mediaType || 'video';
         if (mediaUrl) {
             const el = document.createElement(mediaType); el.src = mediaUrl; el.className = 'max-w-[80%] max-h-[80%] outline-none transition-all duration-500'; el.autoplay = true;
             el.onplay = () => { this.els.iconPlay.classList.add('gengr-hidden'); this.els.iconPause.classList.remove('gengr-hidden'); };
@@ -536,24 +587,234 @@ export class GengrExplorer {
         }
     }
 
-    render3D(manifest) {
+    render3D(manifest, parsed) {
         this.els.threeD.classList.remove('hidden'); this.showToolbar(true);
         this.els.btns.zoomIn.classList.add('gengr-hidden'); this.els.btns.zoomOut.classList.add('gengr-hidden'); this.els.btns.bookToggle.classList.add('gengr-hidden');
-        let modelUrl = null;
-        const findModel = (obj) => {
-            if (!obj || modelUrl) return;
-            if (obj.format?.includes('gltf') || (typeof obj.id === 'string' && (obj.id.endsWith('.glb') || obj.id.endsWith('.gltf')))) { modelUrl = obj.id; return; }
-            if (Array.isArray(obj)) obj.forEach(findModel);
-            else if (typeof obj === 'object') Object.values(obj).forEach(findModel);
-        };
-        findModel(manifest);
+        this.modelItems = parsed?.modelItems || [];
+        if (this.modelItems.length === 0) { this.showMessage("No 3D models found."); return; }
+        const current = this.modelItems[this.currentModelIndex] || this.modelItems[0];
+        const modelUrl = current?.id || current?.url;
         if (modelUrl) { this.els.threeD.innerHTML = `<model-viewer src="${modelUrl}" camera-controls auto-rotate class="w-full h-full"></model-viewer>`; }
+    }
+
+    renderCollection(manifest, parsed) {
+        this.showToolbar(false);
+        if (!parsed?.items?.length) {
+            this.showMessage('Collection is empty or has no items.');
+            return;
+        }
+        this.showMessage('Select an item from the sidebar to explore.');
+    }
+
+    bindSidebarActions(parsed) {
+        const container = this.els.metadataContainer;
+        if (!container) return;
+        container.querySelectorAll('[data-gengr-item]').forEach(btn => {
+            btn.onclick = () => {
+                const idx = Number(btn.getAttribute('data-gengr-item'));
+                const item = parsed?.items?.[idx];
+                if (item?.id) this.loadManifest(item.id);
+            };
+        });
+        container.querySelectorAll('[data-gengr-canvas]').forEach(btn => {
+            btn.onclick = () => {
+                const idx = Number(btn.getAttribute('data-gengr-canvas'));
+                if (this.osdExplorer) this.osdExplorer.goToPage(idx);
+            };
+        });
+        container.querySelectorAll('[data-gengr-av]').forEach(btn => {
+            btn.onclick = () => {
+                const idx = Number(btn.getAttribute('data-gengr-av'));
+                this.currentAvIndex = idx;
+                this.renderAV(this.currentManifest, this.currentParsed);
+            };
+        });
+        container.querySelectorAll('[data-gengr-model]').forEach(btn => {
+            btn.onclick = () => {
+                const idx = Number(btn.getAttribute('data-gengr-model'));
+                this.currentModelIndex = idx;
+                this.render3D(this.currentManifest, this.currentParsed);
+            };
+        });
+        container.querySelectorAll('[data-gengr-range]').forEach(btn => {
+            btn.onclick = () => {
+                const idx = Number(btn.getAttribute('data-gengr-range'));
+                const range = parsed?.ranges?.[idx];
+                const firstCanvasId = range?.items?.[0];
+                const canvasIdx = firstCanvasId && parsed?.canvasIndexById?.[firstCanvasId];
+                if (this.osdExplorer && Number.isInteger(canvasIdx)) {
+                    this.osdExplorer.goToPage(canvasIdx);
+                }
+            };
+        });
+    }
+
+    parseManifest(manifest) {
+        const asArray = (val) => (Array.isArray(val) ? val : (val ? [val] : []));
+        const getId = (obj) => (obj && (obj.id || obj['@id'])) || null;
+        const getType = (obj) => (obj && (obj.type || obj['@type'])) || '';
+        const getLabel = (label) => {
+            if (!label) return '';
+            if (typeof label === 'string') return label;
+            if (Array.isArray(label)) return getLabel(label[0]);
+            if (typeof label === 'object') {
+                const values = Object.values(label);
+                return values.length > 0 ? getLabel(values[0]) : '';
+            }
+            return '';
+        };
+        const getSummary = (summary) => getLabel(summary);
+        const extractImageServiceId = (service) => {
+            const services = asArray(service);
+            for (const svc of services) {
+                const type = getType(svc);
+                const profile = svc?.profile;
+                const id = getId(svc);
+                const profileStr = typeof profile === 'string' ? profile : '';
+                if (type.includes('ImageService') || profileStr.includes('iiif.io/api/image')) {
+                    if (id) return id.endsWith('/info.json') ? id : `${id}/info.json`;
+                }
+            }
+            return null;
+        };
+        const parseBody = (body) => {
+            const bodies = asArray(body);
+            const imageSources = [];
+            const avItems = [];
+            const modelItems = [];
+            bodies.forEach(b => {
+                if (!b) return;
+                const type = getType(b);
+                const id = getId(b);
+                const format = b.format || '';
+                const serviceId = extractImageServiceId(b.service || b.services);
+                if (serviceId) imageSources.push(serviceId);
+                else if (format.startsWith('image/') && id) imageSources.push({ type: 'image', url: id });
+                if ((type === 'Video' || format.startsWith('video/')) && id) {
+                    avItems.push({ id, mediaType: 'video', label: getLabel(b.label) });
+                }
+                if ((type === 'Sound' || format.startsWith('audio/')) && id) {
+                    avItems.push({ id, mediaType: 'audio', label: getLabel(b.label) });
+                }
+                if ((type === 'Model' || format.includes('gltf') || (typeof id === 'string' && (id.endsWith('.glb') || id.endsWith('.gltf')))) && id) {
+                    modelItems.push({ id, label: getLabel(b.label) });
+                }
+            });
+            return { imageSources, avItems, modelItems };
+        };
+        const parseCanvas = (canvas) => {
+            const imageSources = [];
+            const avItems = [];
+            const modelItems = [];
+            const items = asArray(canvas.items);
+            items.forEach(page => {
+                const annos = asArray(page.items);
+                annos.forEach(anno => {
+                    const motivation = anno.motivation || '';
+                    if (!motivation || motivation === 'painting') {
+                        const parsed = parseBody(anno.body || anno.resource);
+                        imageSources.push(...parsed.imageSources);
+                        avItems.push(...parsed.avItems);
+                        modelItems.push(...parsed.modelItems);
+                    }
+                });
+            });
+            const images = asArray(canvas.images);
+            images.forEach(img => {
+                const res = img.resource || img.body;
+                const parsed = parseBody(res);
+                imageSources.push(...parsed.imageSources);
+            });
+            return {
+                id: getId(canvas),
+                label: getLabel(canvas.label),
+                imageSources,
+                avItems,
+                modelItems
+            };
+        };
+        const manifestType = getType(manifest).toLowerCase();
+        const isCollection = manifestType.includes('collection');
+        const label = getLabel(manifest.label);
+        const summary = getSummary(manifest.summary || manifest.description);
+        const metadata = asArray(manifest.metadata);
+
+        const canvases = [];
+        const canvasIndexById = {};
+        const imageSources = [];
+        const avItems = [];
+        const modelItems = [];
+
+        const v3Canvases = asArray(manifest.items);
+        if (v3Canvases.length) {
+            v3Canvases.forEach(c => {
+                const parsed = parseCanvas(c);
+                const idx = canvases.length;
+                canvases.push({ id: parsed.id, label: parsed.label });
+                if (parsed.id) canvasIndexById[parsed.id] = idx;
+                imageSources.push(...parsed.imageSources);
+                avItems.push(...parsed.avItems);
+                modelItems.push(...parsed.modelItems);
+            });
+        }
+        const v2Seq = asArray(manifest.sequences)[0];
+        const v2Canvases = v2Seq ? asArray(v2Seq.canvases) : [];
+        if (v2Canvases.length) {
+            v2Canvases.forEach(c => {
+                const parsed = parseCanvas(c);
+                const idx = canvases.length;
+                canvases.push({ id: parsed.id, label: parsed.label });
+                if (parsed.id) canvasIndexById[parsed.id] = idx;
+                imageSources.push(...parsed.imageSources);
+                avItems.push(...parsed.avItems);
+                modelItems.push(...parsed.modelItems);
+            });
+        }
+
+        const ranges = asArray(manifest.structures || manifest.ranges).map(r => ({
+            id: getId(r),
+            label: getLabel(r.label),
+            items: asArray(r.items || r.canvases || r.members).map(getId).filter(Boolean)
+        }));
+
+        const items = asArray(manifest.items || manifest.members).map(item => ({
+            id: getId(item),
+            label: getLabel(item.label),
+            type: getType(item)
+        })).filter(i => i.id);
+
+        const dedupe = (arr) => {
+            const seen = new Set();
+            return arr.filter(item => {
+                const key = typeof item === 'string' ? item : JSON.stringify(item);
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        };
+
+        const parsed = {
+            type: isCollection ? 'collection' : this.detectType(manifest, { imageSources, avItems, modelItems }),
+            label,
+            summary,
+            metadata,
+            canvases,
+            canvasIndexById,
+            imageSources: dedupe(imageSources),
+            avItems: dedupe(avItems),
+            modelItems: dedupe(modelItems),
+            ranges,
+            items
+        };
+
+        return parsed;
     }
 
     resetExplorers() {
         this.els.osd.classList.add('hidden'); this.els.av.classList.add('hidden'); this.els.threeD.classList.add('hidden'); this.els.message.classList.add('hidden'); this.els.topBar.style.opacity = '0'; this.showToolbar(false);
         this.els.av.innerHTML = ''; this.els.threeD.innerHTML = ''; this.avPlayer = null;
         if (this.osdExplorer) { this.osdExplorer.destroy(); this.osdExplorer = null; }
+        this.avItems = []; this.modelItems = []; this.currentAvIndex = 0; this.currentModelIndex = 0;
     }
 
     showToolbar(show) { this.els.toolbars.forEach(tb => { tb.style.opacity = show ? '1' : '0'; tb.style.pointerEvents = show ? 'auto' : 'none'; }); }
