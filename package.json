@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "concurrently \"npm:dev:viewer\" \"npm:dev:app\"",
+        "dev:viewer": "cd ../mimir-iiif-explorer && npm run dev",
+        "dev:app": "vite"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
@@ -15,7 +17,6 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "@google/model-viewer": "^4.1.0",
-        "openseadragon": "^6.0.0"
+        "mimir-iiif-explorer": "file:../mimir-iiif-explorer"
     }
 }

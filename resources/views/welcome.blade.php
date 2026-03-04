@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{{ config('app.name', 'Gengr') }}</title>
+        <title>{{ config('app.name', 'Mimir') }}</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -24,7 +24,7 @@
 
         <style>
             :root {
-                --gengr-primary: #451F8D;
+                --mimir-primary: #451F8D;
             }
             .dots-overlay {
                 position: fixed;
@@ -32,13 +32,13 @@
                 pointer-events: none;
                 z-index: 0;
                 opacity: 0.4;
-                background-image: radial-gradient(var(--gengr-primary) 1.5px, transparent 1.5px);
+                background-image: radial-gradient(var(--mimir-primary) 1.5px, transparent 1.5px);
                 background-size: 30px 30px;
             }
             .dark .dots-overlay {
                 opacity: 0.9;
                 background-color: #000000 !important;
-                background-image: radial-gradient(var(--gengr-primary) 1.5px, transparent 1.5px) !important;
+                background-image: radial-gradient(var(--mimir-primary) 1.5px, transparent 1.5px) !important;
 
             }
             .glass-card {
@@ -60,9 +60,9 @@
 
         <header class="p-6 lg:p-8 flex items-center justify-between relative z-10">
             <div class="flex items-center gap-3">
-                <img src="{{ Vite::asset('resources/img/gengr_logo_lightmode.png') }}" alt="Gengr Logo" class="w-10 h-10 block dark:hidden">
-                <img src="{{ Vite::asset('resources/img/gengr_logo_darkmode.png') }}" alt="Gengr Logo" class="w-10 h-10 hidden dark:block">
-                <div class="font-black text-2xl tracking-tighter uppercase text-black dark:text-white">Gengr<span class="text-[#451F8D]">.</span></div>
+                <img src="{{ Vite::asset('resources/img/mimir_logo_lightmode.png') }}" alt="Mimir Logo" class="w-10 h-10 block dark:hidden">
+                <img src="{{ Vite::asset('resources/img/mimir_logo_darkmode.png') }}" alt="Mimir Logo" class="w-10 h-10 hidden dark:block">
+                <div class="font-black text-2xl tracking-tighter uppercase text-black dark:text-white">Mimir<span class="text-[#451F8D]">.</span></div>
             </div>
             <nav class="flex items-center gap-6 text-sm font-black uppercase tracking-widest">
                 @if (Route::has('login'))
@@ -99,7 +99,10 @@
 
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-8 pt-6">
                     <a href="/explorer" class="w-full sm:w-auto px-12 py-6 bg-[#451F8D] text-white text-xl font-black rounded-2xl hover:scale-105 hover:shadow-[0_20px_60px_rgba(69,31,141,0.4)] transition-all shadow-2xl uppercase tracking-widest">
-                        Launch Gengr
+                        Launch Mimir
+                    </a>
+                    <a href="/recipes" class="w-full sm:w-auto px-12 py-6 border-2 border-[#451F8D]/30 text-[#451F8D] text-xl font-black rounded-2xl hover:scale-105 hover:bg-[#451F8D]/10 transition-all uppercase tracking-widest">
+                        Cookbook
                     </a>
                     <a href="https://iiif.io" target="_blank" class="w-full sm:w-auto px-12 py-6 border-2 border-black/10 dark:border-white/20 font-black text-xl text-black dark:text-white rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-all uppercase tracking-widest">
                         IIIF Docs
@@ -109,7 +112,7 @@
         </main>
 
         <footer class="p-12 text-center text-[10px] font-black uppercase tracking-[0.4em] text-black/40 dark:text-white/40 relative z-10">
-            &copy; {{ date('Y') }} Gengr Engine. Redefining Media Exploration.
+            &copy; {{ date('Y') }} Mimir Engine. Redefining Media Exploration.
         </footer>
     </body>
 </html>

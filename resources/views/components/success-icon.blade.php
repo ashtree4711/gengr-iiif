@@ -1,0 +1,1 @@
+<div class="mimir-recipe-success mr-1"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
